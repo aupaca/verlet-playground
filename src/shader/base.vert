@@ -15,7 +15,7 @@ void main()
 {
 	vec2 pos = a_vertPos * a_ballRadius + a_ballCenterPos;
 	gl_Position = s_proj * vec4(pos, 0.0, 1.0);
-	v_color = a_ballColor;
 	v_texCoord = a_texCoord;
+	v_color = a_ballColor;
 }
 

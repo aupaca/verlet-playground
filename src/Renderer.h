@@ -42,14 +42,17 @@ private:
 	void setUniform(const char* name, int value);
 	void configTextures();
 	void configBuffers();
+	void loadTempBuffers(const std::vector<Ball>& objects);
 	
 	int ballCount;
+	std::vector<vec> tempPositions;
+	std::vector<BallProperties> tempProperties;
 	anut::GLSLCompiler glsl;
 	anut::Shader shader;
 	anut::GPUBuffer texQuad;
 	anut::GPUBuffer texQuadIndices;
-	anut::GPUBuffer ballPositions;
-	anut::GPUBuffer ballProperties;
+	anut::GPUBuffer positionsBuffer;
+	anut::GPUBuffer propertiesBuffer;
 	anut::VertexLayout layout;
 	anut::Texture ballTexture;
 };

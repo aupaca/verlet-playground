@@ -14,22 +14,24 @@ public:
 	~Grid();
 	
 	void config(const vec& size, const vec& quadDimension);
-	void handleCollision(std::vector<Ball>& objects);
+	void loadObjects(std::vector<Ball>& objects);
+	void detectCollisions();
 	
 private:
-	void mapObjects(std::vector<Ball>& objects);
 	Quad* quad(int row, int col);
 	Quad* quad(const vec& point);
-	void clear();
-	void collide(Ball& obj);
-	void collide(Ball& obj, Quad& nearQuad);
+	void loadAdjacentCells(int row, int col, std::vector<Quad*>& dest);
+	void collide(Ball* target, std::vector<Quad*>& neighbors);
+	void collide(Ball* b1, Ball* b2);
+	bool hasCollision(const Ball& b1, const Ball& b2);
 	
 	std::vector<Quad> quads;
+	std::vector<Quad*> neighborCellsCache;
 	vec gridPos;
 	vec quadSize;
 	vec gridSize;
-	float colCount;
-	float rowCount;
+	int colCount;
+	int rowCount;
 };
 
 #endif

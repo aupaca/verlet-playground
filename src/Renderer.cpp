@@ -6,14 +6,15 @@
 
 Renderer::Renderer(int maxBallCount)
 	: texQuad{GL_ARRAY_BUFFER}, texQuadIndices{GL_ELEMENT_ARRAY_BUFFER}
-	, ballPositions{GL_ARRAY_BUFFER}, ballProperties{GL_ARRAY_BUFFER}
+	, positionsBuffer{GL_ARRAY_BUFFER}, propertiesBuffer{GL_ARRAY_BUFFER}
 	, ballTexture{GL_TEXTURE_2D}
 {
 	ballCount = 0;
 	configTextures();
 	configBuffers();
-	ballPositions.alloc(maxBallCount * sizeof(vec), GL_DYNAMIC_DRAW, nullptr);
-	ballProperties.alloc(maxBallCount * sizeof(BallProperties), GL_DYNAMIC_DRAW, nullptr);
+	tempPositions.reserve(maxBallCount);
+	positionsBuffer.alloc(maxBallCount * sizeof(vec), GL_DYNAMIC_DRAW, nullptr);
+	propertiesBuffer.alloc(maxBallCount * sizeof(BallProperties), GL_DYNAMIC_DRAW, nullptr);
 	glClearColor(0.1f, 0.1f, 0.1f, 1.f);
 }
 
@@ -40,16 +41,30 @@ bool Renderer::init()
 
 void Renderer::loadScene(const std::vector<Ball>& objects)
 {
-    std::vector<vec> pos;
-    std::vector<BallProperties> props;
+    loadTempBuffers(objects);
+    positionsBuffer.copyData(tempPositions.data(), tempPositions.size() * sizeof(vec), 0);
+    propertiesBuffer.copyData(tempProperties.data(), tempProperties.size() * sizeof(BallProperties), ballCount * sizeof(BallProperties));
+    ballCount = objects.size();
+}
+
+void Renderer::loadTempBuffers(const std::vector<Ball>& objects)
+{
+    tempPositions.clear();
     for (const Ball& b : objects)
     {
-        pos.push_back(b.pos);
-        props.push_back({b.color, b.radius});
+        tempPositions.push_back(b.pos);
     }
-    ballCount = objects.size();
-    ballPositions.copyData(pos.data(), pos.size() * sizeof(vec), 0);
-    ballProperties.copyData(props.data(), props.size() * sizeof(BallProperties), 0);
+    
+    if (ballCount == objects.size())
+    {
+        return;
+    }
+    
+    tempProperties.clear();
+    for (int i = ballCount; i < objects.size(); i++)
+    {
+        tempProperties.push_back({objects[i].color, objects[i].radius});
+    }
 }
 
 void Renderer::draw()
@@ -96,9 +111,9 @@ void Renderer::configBuffers()
 	layout.indexBuffer(texQuadIndices);
 	layout.vertexBuffer(POSITION_ATTRIB, texQuad, 2, GL_FLOAT, false, sizeof(Vertex), 0);
 	layout.vertexBuffer(TEXCOORD_ATTRIB, texQuad, 2, GL_FLOAT, false, sizeof(Vertex), sizeof(glm::vec2));
-	layout.vertexBuffer(CENTERPOS_ATTRIB, ballPositions, 2, GL_FLOAT, false, sizeof(glm::vec2), 0);
-	layout.vertexBuffer(COLOR_ATTRIB, ballProperties, 4, GL_FLOAT, false, sizeof(BallProperties), 0);
-	layout.vertexBuffer(RADIUS_ATTRIB, ballProperties, 1, GL_FLOAT, false, sizeof(BallProperties), sizeof(glm::vec4));
+	layout.vertexBuffer(CENTERPOS_ATTRIB, positionsBuffer, 2, GL_FLOAT, false, sizeof(glm::vec2), 0);
+	layout.vertexBuffer(COLOR_ATTRIB, propertiesBuffer, 4, GL_FLOAT, false, sizeof(BallProperties), 0);
+	layout.vertexBuffer(RADIUS_ATTRIB, propertiesBuffer, 1, GL_FLOAT, false, sizeof(BallProperties), sizeof(glm::vec4));
 	layout.vertexAttribFrequency(CENTERPOS_ATTRIB, 1);
 	layout.vertexAttribFrequency(RADIUS_ATTRIB, 1);
 	layout.vertexAttribFrequency(COLOR_ATTRIB, 1);

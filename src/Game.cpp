@@ -67,7 +67,7 @@ void Game::dropBall(Touch* touch)
 {
     Finger* finger = &touch->finger;
     
-    if (solver.ballCount() == config.maxBallCount)
+    if (solver.ballCount() + 1 >= config.maxBallCount)
     {
         return;
     }

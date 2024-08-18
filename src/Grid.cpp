@@ -22,65 +22,102 @@ void Grid::config(const vec& size, const vec& quadDimension)
 	quads.resize(rowCount * colCount);
 }
 
-void Grid::handleCollision(std::vector<Ball>& objects)
+void Grid::loadObjects(std::vector<Ball>& objects)
 {
-    mapObjects(objects);
-    for (Ball& ball : objects)
-    {
-        collide(ball);
-    }
-}
-
-void Grid::mapObjects(std::vector<Ball>& objects)
-{
-	clear();
+	for (Quad& q : quads)
+	{
+		q.clear();
+	}
+	
 	for (Ball& b : objects)
 	{
 		Quad* cell = quad(b.pos);
-		if (cell)
+		if (cell != nullptr)
 		{
 			cell->push_back(&b);
 		}
 	}
 }
 
-void Grid::collide(Ball& obj)
+void Grid::detectCollisions()
 {
-	int row = obj.pos.y / quadSize.y;
-	int col = obj.pos.x / quadSize.x;
-	
-	int leftQuad = col == 0 ? col : col - 1;
-	int rightQuad = col + 1 == colCount ? col : col + 1;
-	int topQuad = row == 0 ? row : row - 1;
-	int bottomQuad = row + 1 == rowCount ? row : row + 1;
-	
-	for (int i = topQuad; i < bottomQuad; i++)
+    for (int i = 0; i < quads.size(); i++)
+    {
+        int row = i / colCount;
+        int col = i % colCount;
+        neighborCellsCache.clear();
+        loadAdjacentCells(row, col, neighborCellsCache);
+        Quad* currentCell = quad(row, col);
+        for (Ball* object : *currentCell)
+        {
+            collide(object, neighborCellsCache);
+        }
+    }
+}
+
+void Grid::loadAdjacentCells(int row, int col, std::vector<Quad*>& dest)
+{
+    int leftQuad = col == 0 ? col : col - 1;
+    int rightQuad = col + 1 == colCount ? col : col + 1;
+    int topQuad = row == 0 ? row : row - 1;
+    int bottomQuad = row + 1 == rowCount ? row : row + 1;
+    
+    for (int i = topQuad; i < bottomQuad; i++)
+    {
+        for (int j = leftQuad; j < rightQuad; j++)
+        {
+            dest.push_back(quad(i, j));
+        }
+    }
+}
+
+void Grid::collide(Ball* target, std::vector<Quad*>& neighbors)
+{
+	for (Quad* cell : neighbors)
 	{
-		for (int j = leftQuad; j < rightQuad; j++)
-		{
-			Quad* nearObjects = quad(i, j);
-			collide(obj, *nearObjects);
-		}
+	    for (Ball* obj : *cell)
+	    {
+	        collide(target, obj);
+	    }
 	}
 }
 
-void Grid::collide(Ball& obj, Quad& group)
+void Grid::collide(Ball* b1, Ball* b2)
 {
-	for (Ball* b : group)
+    if (b1 == b2 || !hasCollision(*b1, *b2))
+    {
+        return;
+    }
+	
+	vec axis = b1->pos - b2->pos;
+	float dist = hypotf(axis.x, axis.y);
+	float minDist = b1->radius + b2->radius;
+	float massRatio1 = b1->radius / minDist;
+	float massRatio2 = b2->radius / minDist;
+	float delta = minDist - dist;
+	vec n = axis / dist;
+	
+	if (b1->stopped)
 	{
-		Ball& otherObj = *b;
-		if (&obj == &otherObj)
-		{
-			return;
-		}
-		vec axis = obj.pos - otherObj.pos;
-		float dist2 = axis.x * axis.x + axis.y * axis.y;
-		float targetDist = obj.radius + otherObj.radius;
-		if (dist2 < targetDist * targetDist)
-		{
-			setDistance(&obj, &otherObj, targetDist);
-		}
+	    b2->pos -= n * delta;
 	}
+	else if (b2->stopped)
+	{
+	    b1->pos += n * delta;
+	}
+	else
+	{
+	    b1->pos += n * (0.5f * 1.f/4.f * massRatio2 * delta);
+	    b2->pos -= n * (0.5f * 1.f/4.f * massRatio1 * delta);
+	}
+}
+
+bool Grid::hasCollision(const Ball& b1, const Ball& b2)
+{
+    vec axis = b1.pos - b2.pos;
+    float dist2 = axis.x * axis.x + axis.y * axis.y;
+    float minDist = b1.radius + b2.radius;
+    return dist2 < minDist * minDist;
 }
 
 Grid::Quad* Grid::quad(int row, int col)
@@ -111,12 +148,4 @@ Grid::Quad* Grid::quad(const vec& point)
 	int col = point.x / quadSize.x;
 	int index = row * colCount + col;
 	return &quads[index];
-}
-
-void Grid::clear()
-{
-	for (auto& q : quads)
-	{
-		q.clear();
-	}
 }

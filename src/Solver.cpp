@@ -19,9 +19,12 @@ void Solver::init(int maxBallCount, float maxBallRadius)
 
 void Solver::update(float dt)
 {
-    applyLink();
-    applyCollision();
-    applyGravity(dt);
+    for (int i = 0; i < 4; i++)
+    {
+        applyGravity(dt/4.f);
+        applyCollision();
+        applyLink();
+    }
 }
 
 void Solver::applyGravity(float dt)
@@ -44,7 +47,8 @@ void Solver::applyLink()
 
 void Solver::applyCollision()
 {
-    collisionGrid.handleCollision(objects);
+   collisionGrid.loadObjects(objects);
+   collisionGrid.detectCollisions();
 }
 
 void Solver::constrain(Ball* b)

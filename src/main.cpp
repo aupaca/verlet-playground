@@ -7,7 +7,7 @@
 void android_main(android_app* state)
 {
 	GameParam config;
-	config.primaryColor = normalRgbFromHex(0xFFDAB9);
+	config.primaryColor = normalRgbFromHex(0xB57EDC);//0xFFDAB9);
 	config.secondaryColor = normalRgbFromHex(0xFFFFFF);
 	config.maxBallCount = 300;
 	config.ropeRadius = 16.f;
