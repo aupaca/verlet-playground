@@ -1,6 +1,7 @@
 #include "Solver.h"
 #include "Ball.h"
 #include <ANUT/ANUT.h>
+#include <cmath>
 
 Solver::Solver()
 {
@@ -19,12 +20,9 @@ void Solver::init(int maxBallCount, float maxBallRadius)
 
 void Solver::update(float dt)
 {
-    for (int i = 0; i < 4; i++)
-    {
-        applyGravity(dt/4.f);
-        applyCollision();
-        applyLink();
-    }
+    applyGravity(dt);
+    applyCollision();
+    applyLink();
 }
 
 void Solver::applyGravity(float dt)
@@ -67,19 +65,65 @@ void Solver::constrain(Ball* b)
         b->pos.y = 0.f + b->radius;
     }
     
-    if (ballRight > screenSize.x)
+    if (ballRight > screenSize.x - 200.f)
     {
-        b->pos.x = screenSize.x - b->radius;
+        b->pos.x = screenSize.x - b->radius - 200.f;
     }
-    else if (ballLeft < 0)
+    else if (ballLeft < 200.f)
     {
-        b->pos.x = 0.f + b->radius;
+        b->pos.x = 200.f + b->radius;
     }
 }
 
-void Solver::addBall(const vec& pos, float radius, const glm::vec4& color, bool fix)
+Ball* Solver::findObjectAtPoint(const vec& p)
+{
+    return collisionGrid.findObject(p);
+}
+
+Ball* Solver::addBall(const vec& pos, float radius, const glm::vec4& color, bool fix)
 {
     objects.emplace_back(pos, radius, color, fix);
+    return &objects.back();
+}
+
+Ball* Solver::addBox(const vec& centerPos, float radius, int w, int h, const glm::vec4& color)
+{
+    float jumpY = 2.f * radius;
+    float diagonalDist = hypotf(2.f * radius, 2.f * radius);
+    vec nextLinePos = centerPos - vec(0.f, (w / 2.f - 0.5f) * jumpY);
+    
+    Ball* prevLine = addLine(nextLinePos, w, radius, color);
+    Ball* firstBall = prevLine;
+    for (int i = 1; i < h; i++)
+    {
+        nextLinePos.y += jumpY;
+        Ball* currLine = addLine(nextLinePos, w, radius, color);
+        link(&currLine[0], &prevLine[0]);
+        for (int i = 1; i < w; i++)
+        {
+            link(&currLine[i], &prevLine[i]);
+            link(&currLine[i], &prevLine[i - 1], diagonalDist);
+        }
+        prevLine = currLine;
+    }
+    return firstBall;
+}
+
+Ball* Solver::addLine(const vec& centerPos, int w, float radius, const glm::vec4& color)
+{
+    float jumpX = 2.f * radius;
+    vec initPos = centerPos - vec((w / 2.f - 0.5f) * jumpX, 0.f);
+    vec nextBallPos = initPos;
+    
+    Ball* firstBall = addBall(nextBallPos, radius, color);
+    for (int i = 1; i < w; i++)
+    {
+        nextBallPos.x += jumpX;
+        Ball* curr = addBall(nextBallPos, radius, color);
+        Ball* back = &curr[-1];
+        link(curr, back);
+    }
+    return firstBall;
 }
 
 void Solver::link(Ball* b1, Ball* b2)
@@ -88,6 +132,16 @@ void Solver::link(Ball* b1, Ball* b2)
     conn.obj1 = b1;
     conn.obj2 = b2;
     conn.targetDist = b1->radius + b2->radius;
+    setDistance(b1, b2, conn.targetDist);
+    links.push_back(conn);
+}
+
+void Solver::link(Ball* b1, Ball* b2, float minDist)
+{
+    Link conn;
+    conn.obj1 = b1;
+    conn.obj2 = b2;
+    conn.targetDist = minDist;
     setDistance(b1, b2, conn.targetDist);
     links.push_back(conn);
 }

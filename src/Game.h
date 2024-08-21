@@ -10,11 +10,12 @@
 class Renderer;
 class Ball;
 
-enum DropMode
+enum Mode
 {
     NONE = 0,
-    DROP,
-    BRIDGE
+    DROP_OBJECT,
+    BUILD_BRIDGE,
+    MOVE_OBJECT
 };
 
 struct Touch 
@@ -23,7 +24,7 @@ struct Touch
     void unpauseBalls();
     
     Finger finger;
-    int dropMode;
+    int interactionMode;
     Ball* ballTarget;
     std::vector<Ball*> tempStoppedBalls;
 };
@@ -41,7 +42,7 @@ public:
     void handleTouch(const anut::MotionEvent& motion);
     
 private:
-    void dropBall(Touch* t);
+    void interact(Touch* t);
     void detectMode(Touch* t);
     
     static constexpr int MULTITOUCH_LIMIT = 5;

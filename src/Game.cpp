@@ -41,29 +41,39 @@ void Game::update(float dt)
         Touch* t = &touches[i];
         if (t->finger.isPressed())
         {
-            dropBall(t);
+            interact(t);
         }
     }
     solver.update(dt);
 }
 
+void Game::draw()
+{
+    renderer->loadScene(solver.getObjects());
+    renderer->draw();
+}
+
 void Game::detectMode(Touch* touch)
 {
     Finger* finger = &touch->finger;
-    
+    Ball* b;
+    if ((b = solver.findObjectAtPoint(finger->pos)))
+    {
+        touch->interactionMode = MOVE_OBJECT;
+        touch->ballTarget = b;
+    }
     if (finger->pressedTime() >= 0.3f)
     {
-        touch->dropMode = DROP;
+        touch->interactionMode = DROP_OBJECT;
     }
-    else if (finger->moved(config.ropeRadius, finger->firstPos))
+    else if (finger->moved(16.f, finger->firstPos))
     {
-        touch->dropMode = BRIDGE;
-        solver.addBall(finger->pos, config.ropeRadius, config.primaryColor, true);
-        touch->ballTarget = solver.getLastBall();
+        touch->interactionMode = BUILD_BRIDGE;
+        touch->ballTarget = solver.addBall(finger->pos, config.ropeRadius, config.primaryColor, true);
     }
 }
 
-void Game::dropBall(Touch* touch)
+void Game::interact(Touch* touch)
 {
     Finger* finger = &touch->finger;
     
@@ -71,30 +81,35 @@ void Game::dropBall(Touch* touch)
     {
         return;
     }
-    if (touch->dropMode == NONE)
+    if (touch->interactionMode == NONE)
     {
         detectMode(touch);
         return;
     }
     
-    if (touch->dropMode == DROP)
+    Ball* b;
+    switch (touch->interactionMode)
     {
-        solver.addBall(finger->pos, radiusRange(numberGen), config.primaryColor);
+        case MOVE_OBJECT:
+            touch->ballTarget->pos = finger->pos;
+            break;
+            
+        case DROP_OBJECT:
+            solver.addBox(finger->pos, config.minBallRadius, 3 + numberGen() % 5, 3 + numberGen() % 13, config.primaryColor);
+            finger->isDown = false;
+            break;
+        
+        case BUILD_BRIDGE:
+            if (!finger->moved(2.f * config.ropeRadius, touch->ballTarget->pos))
+            {
+                return;
+            }
+            b = solver.addBall(finger->pos, config.ropeRadius, config.secondaryColor);
+            solver.link(touch->ballTarget, b);
+            touch->ballTarget = b;
+            touch->pauseBall(b);
+            break;
     }
-    else if (touch->dropMode == BRIDGE && finger->moved(2 * config.ropeRadius, touch->ballTarget->pos))
-    {
-        solver.addBall(finger->pos, config.ropeRadius, config.secondaryColor);
-        Ball* lastBall = solver.getLastBall();
-        solver.link(lastBall, touch->ballTarget);
-        touch->ballTarget = lastBall;
-        touch->pauseBall(lastBall);
-    }
-}
-
-void Game::draw()
-{
-    renderer->loadScene(solver.getObjects());
-    renderer->draw();
 }
 
 void Game::handleTouch(const anut::MotionEvent& motion)
@@ -110,7 +125,7 @@ void Game::handleTouch(const anut::MotionEvent& motion)
     {
         case anut::MotionEvent::ACTION_DOWN:
             finger->onDown(motion);
-            touch->dropMode = NONE;
+            touch->interactionMode = NONE;
             break;
         
         case anut::MotionEvent::ACTION_MOVE:
@@ -119,7 +134,7 @@ void Game::handleTouch(const anut::MotionEvent& motion)
         
         case anut::MotionEvent::ACTION_UP:
             finger->onUp(motion);
-            if (touch->dropMode == BRIDGE)
+            if (touch->interactionMode == BUILD_BRIDGE)
             {
                 solver.addBall(finger->pos, config.ropeRadius, config.primaryColor, true);
                 solver.link(solver.getLastBall(), touch->ballTarget);

@@ -55,6 +55,25 @@ void Grid::detectCollisions()
     }
 }
 
+Ball* Grid::findObject(const vec& point)
+{
+    int row = point.y / quadSize.y;
+	int col = point.x / quadSize.x;
+    neighborCellsCache.clear();
+    loadAdjacentCells(row, col, neighborCellsCache);
+    for (Quad* cell : neighborCellsCache)
+    {
+        for (Ball* obj : *cell)
+        {
+            if (hasCollision(*obj, point))
+            {
+                return obj;
+            }
+        }
+    }
+    return nullptr;
+}
+
 void Grid::loadAdjacentCells(int row, int col, std::vector<Quad*>& dest)
 {
     int leftQuad = col == 0 ? col : col - 1;
@@ -107,8 +126,8 @@ void Grid::collide(Ball* b1, Ball* b2)
 	}
 	else
 	{
-	    b1->pos += n * (0.5f * 1.f/4.f * massRatio2 * delta);
-	    b2->pos -= n * (0.5f * 1.f/4.f * massRatio1 * delta);
+	    b1->pos += n * (0.5f * massRatio2 * delta);
+	    b2->pos -= n * (0.5f * massRatio1 * delta);
 	}
 }
 
@@ -117,6 +136,14 @@ bool Grid::hasCollision(const Ball& b1, const Ball& b2)
     vec axis = b1.pos - b2.pos;
     float dist2 = axis.x * axis.x + axis.y * axis.y;
     float minDist = b1.radius + b2.radius;
+    return dist2 < minDist * minDist;
+}
+
+bool Grid::hasCollision(const Ball& ball, const vec& pos)
+{
+    vec axis = ball.pos - pos;
+    float dist2 = axis.x * axis.x + axis.y * axis.y;
+    float minDist = ball.radius + 5.f;
     return dist2 < minDist * minDist;
 }
 

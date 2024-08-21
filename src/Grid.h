@@ -16,6 +16,7 @@ public:
 	void config(const vec& size, const vec& quadDimension);
 	void loadObjects(std::vector<Ball>& objects);
 	void detectCollisions();
+	Ball* findObject(const vec& point);
 	
 private:
 	Quad* quad(int row, int col);
@@ -24,6 +25,7 @@ private:
 	void collide(Ball* target, std::vector<Quad*>& neighbors);
 	void collide(Ball* b1, Ball* b2);
 	bool hasCollision(const Ball& b1, const Ball& b2);
+	bool hasCollision(const Ball& ball, const vec& pos);
 	
 	std::vector<Quad> quads;
 	std::vector<Quad*> neighborCellsCache;

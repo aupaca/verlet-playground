@@ -15,7 +15,7 @@ Renderer::Renderer(int maxBallCount)
 	tempPositions.reserve(maxBallCount);
 	positionsBuffer.alloc(maxBallCount * sizeof(vec), GL_DYNAMIC_DRAW, nullptr);
 	propertiesBuffer.alloc(maxBallCount * sizeof(BallProperties), GL_DYNAMIC_DRAW, nullptr);
-	glClearColor(0.1f, 0.1f, 0.1f, 1.f);
+	glClearColor(0.f, 0.f, 0.f, 1.f);
 }
 
 bool Renderer::init()

@@ -21,8 +21,12 @@ public:
     
     void init(int maxBallCount, float maxBallRadius);
     void update(float dt);
-    void addBall(const vec& pos, float radius, const glm::vec4& color, bool fix = false);
-    void link(Ball* ball1, Ball* ball2);
+    Ball* findObjectAtPoint(const vec& p);
+    Ball* addBall(const vec& pos, float radius, const glm::vec4& color, bool fix = false);
+    Ball* addBox(const vec& centerPos, float radius, int w, int h, const glm::vec4& color);
+    Ball* addLine(const vec& centerPos, int w, float radius, const glm::vec4& color);
+    void link(Ball* b1, Ball* b2);
+    void link(Ball* b1, Ball* b2, float minDist);
     Ball* getLastBall();
     int ballCount() const;
     const std::vector<Ball>& getObjects() const;
