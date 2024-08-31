@@ -8,9 +8,7 @@ struct GameParam
     glm::vec4 primaryColor;
     glm::vec4 secondaryColor;
     size_t maxBallCount;
-    float ropeRadius;
-    float minBallRadius;
-    float maxBallRadius;
+    float ballRadius;
 };
 
 #endif

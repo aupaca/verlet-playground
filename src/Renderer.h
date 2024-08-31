@@ -1,23 +1,14 @@
 #ifndef RENDERER_H
 #define RENDERER_H
 #include "vec.h"
+#include "shader.h"
 #include <ANUT/ANUT_graphics.h>
 #include <glm/glm.hpp>
 #include <vector>
 
 class Ball;
-
-struct Vertex
-{
-	glm::vec2 pos;
-	glm::vec2 texCoord;
-};
-
-struct BallProperties
-{
-	glm::vec4 color;
-	float radius;
-};
+//class BallBuffer1;
+//class BallBuffer2;
 
 class Renderer
 {
@@ -27,26 +18,18 @@ public:
 	bool init();
 	void loadScene(const std::vector<Ball>& objects);
 	void draw();
+	void setUniform(const char* name, const glm::mat4& value);
+	void setUniform(const char* name, const glm::vec4& value);
+	void setUniform(const char* name, int value);
 	
 private:
-	enum
-	{
-		POSITION_ATTRIB = 0,
-		TEXCOORD_ATTRIB,
-		CENTERPOS_ATTRIB,
-		COLOR_ATTRIB,
-		RADIUS_ATTRIB
-	};
-	
-	void setUniform(const char* name, const glm::mat4& value);
-	void setUniform(const char* name, int value);
 	void configTextures();
 	void configBuffers();
 	void loadTempBuffers(const std::vector<Ball>& objects);
 	
 	int ballCount;
-	std::vector<vec> tempPositions;
-	std::vector<BallProperties> tempProperties;
+	std::vector<BallPosition> tempPositions;
+	std::vector<BallAttributes> tempProperties;
 	anut::GLSLCompiler glsl;
 	anut::Shader shader;
 	anut::GPUBuffer texQuad;

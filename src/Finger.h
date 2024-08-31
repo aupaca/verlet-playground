@@ -18,6 +18,7 @@ struct Finger
     glm::vec2 pos;
     glm::vec2 firstPos;
     anut::Timer::TimePoint downTime;
+    int action;
     bool isDown;
 };
 

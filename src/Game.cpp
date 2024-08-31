@@ -5,10 +5,19 @@
 
 Game::Game(const GameParam& param)
     : numberGen(1)
-    , radiusRange(param.minBallRadius, param.maxBallRadius)
+    , colorFrag(0, 255)
 {
     config = param;
     renderer = nullptr;
+    currColor = config.primaryColor;
+    nextColor = randomColor();
+    gradient = nextColor - currColor;
+    frac = 0.f;
+    
+    for (int i = 0; i < MULTITOUCH_LIMIT; i++)
+    {
+        touches[i].interactionMode = DISABLED;
+    }
 }
 
 Game::~Game()
@@ -25,7 +34,9 @@ bool Game::initGraphics()
         renderer = nullptr;
         return false;
     }
-    solver.init(config.maxBallCount, config.maxBallRadius);
+    renderer->setUniform("u_primaryColor", config.primaryColor);
+    renderer->setUniform("u_secondaryColor", config.secondaryColor);
+    solver.init(config.maxBallCount, config.ballRadius);
     return true;
 }
 
@@ -39,11 +50,20 @@ void Game::update(float dt)
     for (int i = 0; i < MULTITOUCH_LIMIT; i++)
     {
         Touch* t = &touches[i];
-        if (t->finger.isPressed())
-        {
-            interact(t);
-        }
+        interact(t);
     }
+    
+    frac += dt / 5.f;
+    if (frac >= 1.f)
+    {
+        frac = 0.f;
+        currColor = nextColor;
+        nextColor = randomColor();
+        gradient = nextColor - currColor;
+    }
+    glm::vec4 primaryColor = currColor + gradient * frac;
+    renderer->setUniform("u_primaryColor", primaryColor);
+    
     solver.update(dt);
 }
 
@@ -53,63 +73,109 @@ void Game::draw()
     renderer->draw();
 }
 
+glm::vec4 Game::randomColor()
+{
+    glm::vec4 c;
+    c.x = colorFrag(numberGen) / 255.f;
+    c.y = colorFrag(numberGen) / 255.f;
+    c.z = colorFrag(numberGen) / 255.f;
+    c.w = 1.f;
+    return c;
+}
+
 void Game::detectMode(Touch* touch)
 {
     Finger* finger = &touch->finger;
     Ball* b;
-    if ((b = solver.findObjectAtPoint(finger->pos)))
+    if ((b = solver.findObject(finger->pos)))
     {
         touch->interactionMode = MOVE_OBJECT;
-        touch->ballTarget = b;
+        touch->clamp.target = b;
     }
-    if (finger->pressedTime() >= 0.3f)
+    else if (finger->pressedTime() >= 0.3f)
     {
         touch->interactionMode = DROP_OBJECT;
+        touch->box.width = 2 + numberGen() % 4;
+        touch->box.height = 2 + numberGen() % 4;
     }
     else if (finger->moved(16.f, finger->firstPos))
     {
         touch->interactionMode = BUILD_BRIDGE;
-        touch->ballTarget = solver.addBall(finger->pos, config.ropeRadius, config.primaryColor, true);
+        touch->bridge.currHead = nullptr;
+        touch->bridge.finalize = false;
     }
 }
 
 void Game::interact(Touch* touch)
 {
-    Finger* finger = &touch->finger;
-    
-    if (solver.ballCount() + 1 >= config.maxBallCount)
+    if (touch->interactionMode == DISABLED)
     {
         return;
     }
     if (touch->interactionMode == NONE)
     {
         detectMode(touch);
+    }
+    
+    if (fullMemory(touch))
+    {
+        touch->interactionMode = DISABLED;
         return;
     }
     
     Ball* b;
+    Finger* finger = &touch->finger;
     switch (touch->interactionMode)
     {
         case MOVE_OBJECT:
-            touch->ballTarget->pos = finger->pos;
+            touch->clamp.target->pos = finger->pos;
             break;
             
         case DROP_OBJECT:
-            solver.addBox(finger->pos, config.minBallRadius, 3 + numberGen() % 5, 3 + numberGen() % 13, config.primaryColor);
-            finger->isDown = false;
+            solver.addBox(finger->pos, config.ballRadius, touch->box.width, touch->box.height, PRIMARY_COLOR);
+            touch->interactionMode = DISABLED;
             break;
         
         case BUILD_BRIDGE:
-            if (!finger->moved(2.f * config.ropeRadius, touch->ballTarget->pos))
+            if (touch->bridge.currHead == nullptr)//finger->action == anut::MotionEvent::ACTION_DOWN)
             {
-                return;
+                touch->bridge.currHead = solver.addBall(finger->pos, config.ballRadius, PRIMARY_COLOR, true);
             }
-            b = solver.addBall(finger->pos, config.ropeRadius, config.secondaryColor);
-            solver.link(touch->ballTarget, b);
-            touch->ballTarget = b;
-            touch->pauseBall(b);
+            else if (finger->action == anut::MotionEvent::ACTION_UP)
+            {
+                b = solver.addBall(finger->pos, config.ballRadius, PRIMARY_COLOR, true);
+                solver.link(touch->bridge.currHead, b);
+                touch->interactionMode = DISABLED;
+            }
+            else if (finger->moved(2.f * config.ballRadius, touch->bridge.currHead->pos))
+            {
+                b = solver.addBall(finger->pos, config.ballRadius, SECONDARY_COLOR);
+                solver.link(touch->bridge.currHead, b);
+                touch->bridge.currHead = b;
+                touch->pauseBall(b);
+            }
             break;
     }
+}
+
+bool Game::fullMemory(Touch* t)
+{
+    if (t->interactionMode == DROP_OBJECT)
+    {
+        int newBalls = t->box.width * t->box.height;
+        if (solver.ballCount() + newBalls > config.maxBallCount)
+        {
+            return true;
+        }
+    }
+    else if (t->interactionMode == BUILD_BRIDGE)
+    {
+        if (solver.ballCount() + 1 > config.maxBallCount)
+        {
+            return true;
+        }
+    }
+    return false;
 }
 
 void Game::handleTouch(const anut::MotionEvent& motion)
@@ -134,12 +200,8 @@ void Game::handleTouch(const anut::MotionEvent& motion)
         
         case anut::MotionEvent::ACTION_UP:
             finger->onUp(motion);
-            if (touch->interactionMode == BUILD_BRIDGE)
-            {
-                solver.addBall(finger->pos, config.ropeRadius, config.primaryColor, true);
-                solver.link(solver.getLastBall(), touch->ballTarget);
-                touch->unpauseBalls();
-            }
+            touch->interactionMode = DISABLED;
+            touch->unpauseBalls();
             break;
     }
 }

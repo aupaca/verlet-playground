@@ -7,12 +7,10 @@
 void android_main(android_app* state)
 {
 	GameParam config;
-	config.primaryColor = normalRgbFromHex(0xFF0040);//0xB57EDC);
+	config.primaryColor = normalRgbFromHex(0xFF0040);
 	config.secondaryColor = normalRgbFromHex(0xFFFFFF);
-	config.maxBallCount = 300;
-	config.ropeRadius = 16.f;
-	config.minBallRadius = 16.f;
-	config.maxBallRadius = 32.f;
+	config.maxBallCount = 20;
+	config.ballRadius = 16.f;
 	
 	anut::Engine andronaut(state);
 	MainActivity* app = new MainActivity(config);

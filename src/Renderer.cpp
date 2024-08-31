@@ -13,8 +13,8 @@ Renderer::Renderer(int maxBallCount)
 	configTextures();
 	configBuffers();
 	tempPositions.reserve(maxBallCount);
-	positionsBuffer.alloc(maxBallCount * sizeof(vec), GL_DYNAMIC_DRAW, nullptr);
-	propertiesBuffer.alloc(maxBallCount * sizeof(BallProperties), GL_DYNAMIC_DRAW, nullptr);
+	positionsBuffer.alloc(maxBallCount * sizeof(BallPosition), GL_DYNAMIC_DRAW, nullptr);
+	propertiesBuffer.alloc(maxBallCount * sizeof(BallAttributes), GL_DYNAMIC_DRAW, nullptr);
 	glClearColor(0.f, 0.f, 0.f, 1.f);
 }
 
@@ -34,16 +34,16 @@ bool Renderer::init()
 	float w = anut::Engine::window->width();
 	float h = anut::Engine::window->height();
 	glm::mat4 proj = glm::ortho(0.f, w, h, 0.f);
-	setUniform("s_proj", proj);
-	setUniform("s_texture", 0);
+	setUniform("u_proj", proj);
+	setUniform("u_texture", 0);
 	return true;
 }
 
 void Renderer::loadScene(const std::vector<Ball>& objects)
 {
     loadTempBuffers(objects);
-    positionsBuffer.copyData(tempPositions.data(), tempPositions.size() * sizeof(vec), 0);
-    propertiesBuffer.copyData(tempProperties.data(), tempProperties.size() * sizeof(BallProperties), ballCount * sizeof(BallProperties));
+    positionsBuffer.copyData(tempPositions.data(), tempPositions.size() * sizeof(BallPosition), 0);
+    propertiesBuffer.copyData(tempProperties.data(), tempProperties.size() * sizeof(BallAttributes), ballCount * sizeof(BallAttributes));
     ballCount = objects.size();
 }
 
@@ -52,7 +52,7 @@ void Renderer::loadTempBuffers(const std::vector<Ball>& objects)
     tempPositions.clear();
     for (const Ball& b : objects)
     {
-        tempPositions.push_back(b.pos);
+        tempPositions.push_back({b.pos});
     }
     
     if (ballCount == objects.size())
@@ -78,6 +78,11 @@ void Renderer::setUniform(const char* name, const glm::mat4& value)
 	glUniformMatrix4fv(shader.uniform(name), 1, false, glm::value_ptr(value));
 }
 
+void Renderer::setUniform(const char* name, const glm::vec4& value)
+{
+    glUniform4fv(shader.uniform(name), 1, glm::value_ptr(value));
+}
+
 void Renderer::setUniform(const char* name, int value)
 {
 	glUniform1i(shader.uniform(name), value);
@@ -85,7 +90,7 @@ void Renderer::setUniform(const char* name, int value)
 
 void Renderer::configTextures()
 {
-	const Vertex quadVertices[] = 
+	const Vertex quad[] = 
 	{
 	    // pos                  // texCoord
 		{glm::vec2(-1.f, -1.f), glm::vec2(0.f, 1.f)},
@@ -98,7 +103,7 @@ void Renderer::configTextures()
 		0, 1, 2,
 		1, 3, 2
 	};
-	texQuad.alloc(sizeof(quadVertices), GL_STATIC_DRAW, quadVertices);
+	texQuad.alloc(sizeof(quad), GL_STATIC_DRAW, quad);
 	texQuadIndices.alloc(sizeof(quadIndices), GL_STATIC_DRAW, quadIndices);
 	ballTexture.parameter(GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	ballTexture.parameter(GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -109,11 +114,11 @@ void Renderer::configTextures()
 void Renderer::configBuffers()
 {
 	layout.indexBuffer(texQuadIndices);
-	layout.vertexBuffer(POSITION_ATTRIB, texQuad, 2, GL_FLOAT, false, sizeof(Vertex), 0);
-	layout.vertexBuffer(TEXCOORD_ATTRIB, texQuad, 2, GL_FLOAT, false, sizeof(Vertex), sizeof(glm::vec2));
-	layout.vertexBuffer(CENTERPOS_ATTRIB, positionsBuffer, 2, GL_FLOAT, false, sizeof(glm::vec2), 0);
-	layout.vertexBuffer(COLOR_ATTRIB, propertiesBuffer, 4, GL_FLOAT, false, sizeof(BallProperties), 0);
-	layout.vertexBuffer(RADIUS_ATTRIB, propertiesBuffer, 1, GL_FLOAT, false, sizeof(BallProperties), sizeof(glm::vec4));
+	layout.vertexBuffer(TEXQUAD_POS_ATTRIB, texQuad, LAYOUT(Vertex, pos, GL_FLOAT));
+	layout.vertexBuffer(TEXQUAD_TEXCOORD_ATTRIB, texQuad, LAYOUT(Vertex, texCoord, GL_FLOAT));
+	layout.vertexBuffer(CENTERPOS_ATTRIB, positionsBuffer, LAYOUT(BallPosition, pos, GL_FLOAT));
+	layout.vertexBuffer(COLOR_ATTRIB, propertiesBuffer, LAYOUT(BallAttributes, color, GL_INT));
+	layout.vertexBuffer(RADIUS_ATTRIB, propertiesBuffer, LAYOUT(BallAttributes, radius, GL_FLOAT));
 	layout.vertexAttribFrequency(CENTERPOS_ATTRIB, 1);
 	layout.vertexAttribFrequency(RADIUS_ATTRIB, 1);
 	layout.vertexAttribFrequency(COLOR_ATTRIB, 1);

@@ -107,28 +107,8 @@ void Grid::collide(Ball* b1, Ball* b2)
     {
         return;
     }
-	
-	vec axis = b1->pos - b2->pos;
-	float dist = hypotf(axis.x, axis.y);
-	float minDist = b1->radius + b2->radius;
-	float massRatio1 = b1->radius / minDist;
-	float massRatio2 = b2->radius / minDist;
-	float delta = minDist - dist;
-	vec n = axis / dist;
-	
-	if (b1->stopped)
-	{
-	    b2->pos -= n * delta;
-	}
-	else if (b2->stopped)
-	{
-	    b1->pos += n * delta;
-	}
-	else
-	{
-	    b1->pos += n * (0.5f * massRatio2 * delta);
-	    b2->pos -= n * (0.5f * massRatio1 * delta);
-	}
+    float minDist = b1->radius + b2->radius;
+	setDistance(b1, b2, minDist);
 }
 
 bool Grid::hasCollision(const Ball& b1, const Ball& b2)

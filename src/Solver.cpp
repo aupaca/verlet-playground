@@ -65,35 +65,29 @@ void Solver::constrain(Ball* b)
         b->pos.y = 0.f + b->radius;
     }
     
-    if (ballRight > screenSize.x - 200.f)
+    if (ballRight > screenSize.x)
     {
-        b->pos.x = screenSize.x - b->radius - 200.f;
+        b->pos.x = screenSize.x - b->radius;
     }
-    else if (ballLeft < 200.f)
+    else if (ballLeft < 0.f)
     {
-        b->pos.x = 200.f + b->radius;
+        b->pos.x = 0.f + b->radius;
     }
 }
 
-Ball* Solver::findObjectAtPoint(const vec& p)
+Ball* Solver::findObject(const vec& p)
 {
     return collisionGrid.findObject(p);
 }
 
-Ball* Solver::addBall(const vec& pos, float radius, const glm::vec4& color, bool fix)
-{
-    objects.emplace_back(pos, radius, color, fix);
-    return &objects.back();
-}
-
-Ball* Solver::addBox(const vec& centerPos, float radius, int w, int h, const glm::vec4& color)
+Ball* Solver::addBox(const vec& centerPos, float radius, int w, int h, const Color& color)
 {
     float jumpY = 2.f * radius;
     float diagonalDist = hypotf(2.f * radius, 2.f * radius);
     vec nextLinePos = centerPos - vec(0.f, (w / 2.f - 0.5f) * jumpY);
     
-    Ball* prevLine = addLine(nextLinePos, w, radius, color);
-    Ball* firstBall = prevLine;
+    Ball* firstBall = addLine(nextLinePos, w, radius, color);
+    Ball* prevLine = firstBall;
     for (int i = 1; i < h; i++)
     {
         nextLinePos.y += jumpY;
@@ -109,7 +103,7 @@ Ball* Solver::addBox(const vec& centerPos, float radius, int w, int h, const glm
     return firstBall;
 }
 
-Ball* Solver::addLine(const vec& centerPos, int w, float radius, const glm::vec4& color)
+Ball* Solver::addLine(const vec& centerPos, int w, float radius, const Color& color)
 {
     float jumpX = 2.f * radius;
     vec initPos = centerPos - vec((w / 2.f - 0.5f) * jumpX, 0.f);
@@ -124,6 +118,12 @@ Ball* Solver::addLine(const vec& centerPos, int w, float radius, const glm::vec4
         link(curr, back);
     }
     return firstBall;
+}
+
+Ball* Solver::addBall(const vec& pos, float radius, const Color& color, bool fix)
+{
+    objects.emplace_back(pos, radius, color, fix);
+    return &objects.back();
 }
 
 void Solver::link(Ball* b1, Ball* b2)
