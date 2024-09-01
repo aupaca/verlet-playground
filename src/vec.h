@@ -4,6 +4,4 @@
 
 using vec = glm::vec2;
 
-glm::vec4 normalRgbFromHex(int hexColor);
-
 #endif

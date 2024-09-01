@@ -12,8 +12,8 @@ struct Ball
 {
     Ball(const vec& initPos, float r, const Color& fillColor, bool fixed = false);
     void applyForce(const vec& f, float dt);
-    void setVelocity(float v);
-    float getVelocity();
+    //void setVelocity(float v);
+    //float getVelocity();
     
     vec pos;
     vec oldPos;

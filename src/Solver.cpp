@@ -20,9 +20,9 @@ void Solver::init(int maxBallCount, float maxBallRadius)
 
 void Solver::update(float dt)
 {
-    applyGravity(dt);
     applyCollision();
     applyLink();
+    applyGravity(dt);
 }
 
 void Solver::applyGravity(float dt)
@@ -132,8 +132,8 @@ void Solver::link(Ball* b1, Ball* b2)
     conn.obj1 = b1;
     conn.obj2 = b2;
     conn.targetDist = b1->radius + b2->radius;
-    setDistance(b1, b2, conn.targetDist);
     links.push_back(conn);
+    setDistance(b1, b2, conn.targetDist);
 }
 
 void Solver::link(Ball* b1, Ball* b2, float minDist)

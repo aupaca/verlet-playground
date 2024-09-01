@@ -43,7 +43,7 @@ void Ball::applyForce(const vec& f, float dt)
     pos += vel + dt * dt * acc;
 }
 
-void Ball::setVelocity(float v)
+/*void Ball::setVelocity(float v)
 {
     vec axis = pos - oldPos;
     float currVel = hypotf(axis.x, axis.y);
@@ -54,4 +54,4 @@ float Ball::getVelocity()
 {
     vec delta = pos - oldPos;
     return hypotf(delta.x, delta.y);
-}
+}*/

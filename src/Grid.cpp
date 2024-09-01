@@ -121,9 +121,10 @@ bool Grid::hasCollision(const Ball& b1, const Ball& b2)
 
 bool Grid::hasCollision(const Ball& ball, const vec& pos)
 {
+    const float radiusDelta = 16.f;
     vec axis = ball.pos - pos;
     float dist2 = axis.x * axis.x + axis.y * axis.y;
-    float minDist = ball.radius + 5.f;
+    float minDist = ball.radius + radiusDelta;
     return dist2 < minDist * minDist;
 }
 

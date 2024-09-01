@@ -4,19 +4,16 @@
 #include "vec.h"
 
 Game::Game(const GameParam& param)
-    : numberGen(1)
-    , colorFrag(0, 255)
+    : numberGen(std::random_device()())
+    , boxWidth(3, 7)
+    , boxHeight(3, 7)
 {
     config = param;
     renderer = nullptr;
-    currColor = config.primaryColor;
-    nextColor = randomColor();
-    gradient = nextColor - currColor;
-    frac = 0.f;
     
     for (int i = 0; i < MULTITOUCH_LIMIT; i++)
     {
-        touches[i].interactionMode = DISABLED;
+        touches[i].canceled = true;
     }
 }
 
@@ -52,18 +49,6 @@ void Game::update(float dt)
         Touch* t = &touches[i];
         interact(t);
     }
-    
-    frac += dt / 5.f;
-    if (frac >= 1.f)
-    {
-        frac = 0.f;
-        currColor = nextColor;
-        nextColor = randomColor();
-        gradient = nextColor - currColor;
-    }
-    glm::vec4 primaryColor = currColor + gradient * frac;
-    renderer->setUniform("u_primaryColor", primaryColor);
-    
     solver.update(dt);
 }
 
@@ -71,16 +56,6 @@ void Game::draw()
 {
     renderer->loadScene(solver.getObjects());
     renderer->draw();
-}
-
-glm::vec4 Game::randomColor()
-{
-    glm::vec4 c;
-    c.x = colorFrag(numberGen) / 255.f;
-    c.y = colorFrag(numberGen) / 255.f;
-    c.z = colorFrag(numberGen) / 255.f;
-    c.w = 1.f;
-    return c;
 }
 
 void Game::detectMode(Touch* touch)
@@ -95,8 +70,8 @@ void Game::detectMode(Touch* touch)
     else if (finger->pressedTime() >= 0.3f)
     {
         touch->interactionMode = DROP_OBJECT;
-        touch->box.width = 2 + numberGen() % 4;
-        touch->box.height = 2 + numberGen() % 4;
+        touch->box.width = boxWidth(numberGen);
+        touch->box.height = boxHeight(numberGen);
     }
     else if (finger->moved(16.f, finger->firstPos))
     {
@@ -108,19 +83,13 @@ void Game::detectMode(Touch* touch)
 
 void Game::interact(Touch* touch)
 {
-    if (touch->interactionMode == DISABLED)
+    if (touch->canceled)
     {
         return;
     }
     if (touch->interactionMode == NONE)
     {
         detectMode(touch);
-    }
-    
-    if (fullMemory(touch))
-    {
-        touch->interactionMode = DISABLED;
-        return;
     }
     
     Ball* b;
@@ -132,11 +101,23 @@ void Game::interact(Touch* touch)
             break;
             
         case DROP_OBJECT:
+            if (!hasCapacity(touch->box.width * touch->box.height))
+            {
+                touch->canceled = true;
+                return;
+            }
+            
             solver.addBox(finger->pos, config.ballRadius, touch->box.width, touch->box.height, PRIMARY_COLOR);
-            touch->interactionMode = DISABLED;
+            touch->canceled = true;
             break;
         
         case BUILD_BRIDGE:
+            if (!hasCapacity(1))
+            {
+                touch->canceled = true;
+                return;
+            }
+            
             if (touch->bridge.currHead == nullptr)//finger->action == anut::MotionEvent::ACTION_DOWN)
             {
                 touch->bridge.currHead = solver.addBall(finger->pos, config.ballRadius, PRIMARY_COLOR, true);
@@ -145,7 +126,7 @@ void Game::interact(Touch* touch)
             {
                 b = solver.addBall(finger->pos, config.ballRadius, PRIMARY_COLOR, true);
                 solver.link(touch->bridge.currHead, b);
-                touch->interactionMode = DISABLED;
+                touch->canceled = true;
             }
             else if (finger->moved(2.f * config.ballRadius, touch->bridge.currHead->pos))
             {
@@ -158,24 +139,13 @@ void Game::interact(Touch* touch)
     }
 }
 
-bool Game::fullMemory(Touch* t)
+bool Game::hasCapacity(int ballsToAdd)
 {
-    if (t->interactionMode == DROP_OBJECT)
+    if (solver.ballCount() + ballsToAdd > config.maxBallCount)
     {
-        int newBalls = t->box.width * t->box.height;
-        if (solver.ballCount() + newBalls > config.maxBallCount)
-        {
-            return true;
-        }
+        return false;
     }
-    else if (t->interactionMode == BUILD_BRIDGE)
-    {
-        if (solver.ballCount() + 1 > config.maxBallCount)
-        {
-            return true;
-        }
-    }
-    return false;
+    return true;
 }
 
 void Game::handleTouch(const anut::MotionEvent& motion)
@@ -192,6 +162,7 @@ void Game::handleTouch(const anut::MotionEvent& motion)
         case anut::MotionEvent::ACTION_DOWN:
             finger->onDown(motion);
             touch->interactionMode = NONE;
+            touch->canceled = false;
             break;
         
         case anut::MotionEvent::ACTION_MOVE:
@@ -200,8 +171,14 @@ void Game::handleTouch(const anut::MotionEvent& motion)
         
         case anut::MotionEvent::ACTION_UP:
             finger->onUp(motion);
-            touch->interactionMode = DISABLED;
-            touch->unpauseBalls();
+            if (touch->interactionMode == BUILD_BRIDGE)
+            {
+                touch->unpauseBalls();
+            }
+            else
+            {
+                touch->canceled = true;
+            }
             break;
     }
 }

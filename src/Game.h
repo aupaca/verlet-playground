@@ -13,7 +13,6 @@ class Ball;
 enum Mode
 {
     NONE = 0,
-    DISABLED,
     DROP_OBJECT,
     BUILD_BRIDGE,
     MOVE_OBJECT
@@ -27,6 +26,7 @@ struct Touch
     Finger finger;
     int interactionMode;
     std::vector<Ball*> tempStoppedBalls;
+    bool canceled;
     
     union
     {
@@ -65,19 +65,15 @@ public:
 private:
     void interact(Touch* t);
     void detectMode(Touch* t);
-    glm::vec4 randomColor();
-    bool fullMemory(Touch* t);
+    bool hasCapacity(int ballsToAdd);
     
     static constexpr int MULTITOUCH_LIMIT = 5;
     Touch touches[MULTITOUCH_LIMIT];
     GameParam config;
     Renderer* renderer;
     std::mt19937 numberGen;
-    std::uniform_int_distribution<int> colorFrag;
-    glm::vec4 currColor;
-    glm::vec4 nextColor;
-    glm::vec4 gradient;
-    float frac;
+    std::uniform_int_distribution<int> boxWidth;
+    std::uniform_int_distribution<int> boxHeight;
     Solver solver;
 };
 
