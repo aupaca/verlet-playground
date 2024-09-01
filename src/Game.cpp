@@ -5,8 +5,8 @@
 
 Game::Game(const GameParam& param)
     : numberGen(std::random_device()())
-    , boxWidth(3, 7)
-    , boxHeight(3, 7)
+    , boxWidth(2, 5)
+    , boxHeight(2, 5)
 {
     config = param;
     renderer = nullptr;

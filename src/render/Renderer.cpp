@@ -20,7 +20,7 @@ Renderer::Renderer(int maxBallCount)
 
 bool Renderer::init()
 {
-	if (!glsl.compile("src/shader/base.vert", "src/shader/base.frag"))
+	if (!glsl.compile("src/render/shader/base.vert", "src/render/shader/base.frag"))
 	{
 		return false;
 	}
